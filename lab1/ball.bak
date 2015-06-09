@@ -1,0 +1,44 @@
+#lang class/0
+(require 2htdp/image)
+(require class/universe)
+
+; A Ball is a (new ball% Number Number Number Color)
+(define-class ball%
+  (fields x y radius color)
+ 
+  ; -> Number
+  ; The Ball's area
+  (define (area)
+    (* pi (sqr (send this radius))))
+ 
+  ; Ball -> Boolean
+  ; Do the Balls have the same radius?
+  (define (same-radius? b)
+    (equal? (send this radius) ; (How to access our own field)
+            (send b radius)))  ; (How to access someone else's field)
+ 
+  ; Ball -> Boolean
+  ; Do the Balls have the same area?
+  (define (same-area? b)
+    (equal? (send this area)  ; (How to call our own method)
+            (send b area)))   ; (How to call someone else's method)
+ 
+  ; -> Image
+  ; The image representing the Ball
+  (define (draw)
+    (circle (send this radius) "solid" (send this color)))
+  
+  ; -> Number
+  ; RETURNS: this ball's circumference
+  (define (circumference)
+    (* 2 pi (send this radius)))
+  
+  ; Ball -> Number
+  ; RETURNS: the distance between this ball and the given ball
+  (define (distance-to that)
+    (sqrt (+ (sqr (- (send this x) (send that x)))
+             (sqr (- (send this y) (send that y))))))
+  )
+
+(define 
+(check-expect
