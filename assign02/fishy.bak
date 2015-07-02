@@ -1,0 +1,232 @@
+#lang class/0
+(require 2htdp/image)
+(require class/universe)
+
+(define WIDTH 500)
+(define HEIGHT 500)
+(define EMPTY-SCENE (empty-scene WIDTH HEIGHT))
+; A World is a (new world% Player ListOf<Fish>)
+(define-class world%
+  (fields player fishes)
+  
+  ; -> World
+  ; RETURNS: the World of next tick
+  (define (on-tick)
+    (new world% 
+         (send (send this player) on-tick)
+         (map
+          ; Fish -> Fish
+          (lambda(f) (send f on-tick))
+          (send this fishes))))
+  
+  ; -> Image
+  ; RETURNS: an Image that depicts this World
+  (define (to-draw)
+    (local 
+      ((define this-player (send this player))
+       (define this-fishes (send this fishes))
+       (define scene-with-player
+         (place-image (send this-player to-draw)
+                      (send this-player x)
+                      (send this-player y)
+                      EMPTY-SCENE)))
+      (foldr
+       ; Fish Image -> Image
+       ; RETURNS: an Image like the given one but with the given Fish drawn on it
+       (lambda(f rest-scene) 
+         (place-image (send f to-draw)
+                      (send f x)
+                      (send f y)
+                      rest-scene))
+       scene-with-player
+       this-fishes)))
+  
+  ; KeyEvent -> World
+  ; GIVEN: the coordinates of a location and a key event
+  ; RETURNS: the World after the given key event of the given location
+  (define (on-key kev)
+    (new world%
+         (send (send this player) kev)
+         (send this fishes)))
+  )
+
+(define PLAYER-COLOR "gold")
+(define PLAYER-SPEED 5)
+; A Player is a (new player% Location Size)
+; REPRESENTS: a fish that is controled by the player
+(define-class player%
+  (fields location size)
+  
+  ; -> World
+  ; RETURNS: the World of next tick
+  (define (on-tick)
+    this)
+  
+  ; -> Number
+  ; RETURNS: the x coordinate of this player
+  (define (x)
+    (send (send this location) x))
+  
+  ; -> Number
+  ; RETURNS: the y coordinates of this player
+  (define (y)
+    (send (send this location) y))
+  
+  ; -> Image
+  ; RETURNS: an Image that depicts this World
+  (define (to-draw)
+    (ellipse (send this width)
+             (send this height)
+             "solid"
+             PLAYER-COLOR))
+  
+  ; -> Number
+  ; RETURNS: the width of this player
+  (define (width)
+    (send (send this size) width))
+  
+  ; -> Number 
+  ; RETURNS: the height of this player
+  (define (height)
+    (send (send this size) height))
+    
+  
+  ; KeyEvent -> World
+  ; GIVEN: the coordinates of a location and a key event
+  ; RETURNS: the World after the given key event of the given location
+  (define (on-key kev)
+    (local 
+      ((define this-loc (send this location))
+       (define this-size (send this size)))
+      (cond
+        [(key=? kev "upper") 
+         (send this-loc move (make-rectangular 0 (- PLAYER-SPEED)))]
+        [(key=? kev "down") 
+         (send this-loc move (make-rectangular 0 PLAYER-SPEED))]
+        [(key=? kev "left") 
+         (send this-loc move (make-rectangular (- PLAYER-SPEED) 0))]
+        [(key=? kev "right") 
+         (send this-loc move (make-rectangular 0 PLAYER-SPEED))]
+        [else this])))  
+  )
+
+
+
+; A Fish is a (new fish% Location Size Number Color)
+; REPRESENTS: a usual fish
+(define-class fish%
+  (fields location size speed color)
+  
+  ; -> World
+  ; RETURNS: the World of next tick
+  (define (on-tick)
+    (new fish%
+         (send (send this location) move 
+               (send this speed))
+         (send this size)
+         (send this speed)))
+  
+  ; -> Number
+  ; RETURNS: the x coordinate of this player
+  (define (x)
+    (send (send this location) x))
+  
+  ; -> Number
+  ; RETURNS: the y coordinates of this player
+  (define (y)
+    (send (send this location) y))  
+  
+  ; -> Image
+  ; RETURNS: an Image that depicts this World
+  (define (to-draw)
+    (ellipse (send this width)
+             (send this height)
+             "solid"
+             (send this color)))
+  
+  ; -> Number
+  ; RETURNS: the width of this player
+  (define (width)
+    (send (send this size) width))
+  
+  ; -> Number 
+  ; RETURNS: the height of this player
+  (define (height)
+    (send (send this size) height))
+  
+  ; Number Number KeyEvent -> World
+  ; GIVEN: the coordinates of a location and a key event
+  ; RETURNS: the World after the given key event of the given location
+  #;(define (on-key)
+    )  
+  )
+
+#;
+(define test-fish1
+  (new fish% 
+       (new location% 250+300i)
+       (new size% 60+30i)
+       3
+       "black"))
+(check-expect 
+ (send (new fish% (new location% 250+300i) (new size% 60+30i) 3 "black")
+       on-tick)
+ (new fish% (new location% 250+300i) (new size% 63+30i) 3 "black"))
+
+
+
+; A Location is a (new location% ComplexNum)
+; REPRESENTS: a location (x, y) is represented by (new location% x+yi)
+(define-class location%
+  (fields location)
+  
+  ; -> Number
+  ; RETURNS: the x coordinate of this player
+  (define (x)
+    (real-part (send this location)))
+  
+  ; -> Number
+  ; RETURNS: the y coordinates of this player
+  (define (y)
+    (imag-part (send this location)))
+  
+  ; Velocity -> Location
+  ; RETURNS: the Location after moving at the given Velocity
+  (define (move v)
+    (new location% (+ (send this location) v)))
+  )
+
+(check-expect (send (new location% 250+300i) x) 250)
+(check-expect (send (new location% 250+300i) y) 300)
+(check-expect (send (new location% 250+300i) move -3)
+              (new location% 247+300i))
+
+
+
+; A Size is a (new size% ComplexNum
+; REPRESENTS: a size of width*height is represented by (new size% width+height*i)
+(define-class size%
+  (fields size)
+  
+  ; -> Number
+  ; RETURNS: the width of this size
+  (define (width)
+    (real-part (send this size)))
+  
+  ; -> Number
+  ; RETURSN: the height of this size
+  (define (height)
+    (imag-part (send this size)))
+  )
+
+(check-expect (send (new size% 60+20i) width) 60)
+(check-expect (send (new size% 60+20i) height) 20)
+
+
+#;
+(big-bang (new world% 
+               (new player% (new location% 250+250i) (new size% 60+30i))
+               (list (new fish% (new location% 300+300i)
+                          (new size% 20+10i)
+                          -2
+                          "purple"))))
